@@ -12,23 +12,29 @@
     <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
     <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
 
-    <style> body { background-color: #f8fafc; } </style>
+    <style> 
+        body { background-color: #f8fafc; } 
+        /* 讓圖表文字更清晰 */
+        .recharts-text { font-family: sans-serif; font-weight: 500; }
+    </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
         // ============================================================================
-        // ★ 已設定您的 Google 試算表連結 ★
+        // ★★★ 請在下方雙引號中，貼上您的 Google 試算表 CSV 網址 ★★★
         // ============================================================================
         
         const MY_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRghdwdi-KiihvjPC5dGU_O8FRfzhZLp77JvD_dr1pRHtP_o39CEtFgk71oQwAGzLw5-ZNzB945UCLg/pub?output=csv"; 
 
+        // ↑↑↑ 請貼在上面這兩個引號中間
         // ============================================================================
 
 
         const { useState, useEffect, useMemo } = React;
-        const { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts || {};
+        // 加入 LabelList 用於長條圖顯示文字
+        const { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } = window.Recharts || {};
 
         // --- 圖示元件 ---
         const IconWallet = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-blue-600"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>;
@@ -40,7 +46,7 @@
         const IconTrash = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
         const IconLink = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
 
-        const STORAGE_KEY = 'my-asset-dashboard-v3';
+        const STORAGE_KEY = 'my-asset-dashboard-v4'; // 升級版本號
         
         const INITIAL_ASSETS = [
             { id: '00692', name: '富邦公司治理', type: 'TW', currency: 'TWD', shares: 5000, price: 63.05 },
@@ -70,7 +76,6 @@
             });
             const [showSettings, setShowSettings] = useState(false);
 
-            // 初始化時讀取 LocalStorage
             useEffect(() => {
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (saved) {
@@ -84,7 +89,6 @@
                 }
             }, []);
 
-            // 啟動時自動同步
             useEffect(() => {
                 const targetUrl = MY_SHEET_URL || sheetUrl;
                 let finalUrl = targetUrl;
@@ -104,15 +108,13 @@
             }, [assets, exchangeRate, lastUpdated, sheetUrl]);
 
             const fetchFromSheet = async (urlOverride = null, isSilent = false) => {
-                // ★★★ 診斷 1: 檢查是否為本地檔案開啟 ★★★
-                if (window.location.protocol === 'file:') {
-                    if (!isSilent) {
-                        alert('⚠️ 安全性限制警告 ⚠️\n\n您目前是直接在電腦上雙擊檔案開啟 (file://)，瀏覽器會基於安全理由阻擋連線。\n\n解決方法：\n請將此 index.html 檔案上傳到 GitHub Pages，然後透過 GitHub 的網址開啟，同步功能就會正常了！');
-                    }
+                let targetUrl = urlOverride || MY_SHEET_URL || sheetUrl;
+
+                // 本機檔案開啟警告
+                if (window.location.protocol === 'file:' && !isSilent) {
+                    alert('⚠️ 警告：請將檔案上傳至 GitHub Pages 以啟用連線功能。直接開啟檔案無法讀取 Google 試算表。');
                     return;
                 }
-
-                let targetUrl = urlOverride || MY_SHEET_URL || sheetUrl;
 
                 if (targetUrl && targetUrl.includes('/edit')) {
                     targetUrl = targetUrl.replace(/\/edit.*$/, '/pub?output=csv');
@@ -120,7 +122,7 @@
 
                 if (!targetUrl || !targetUrl.includes('google.com')) {
                     if (!isSilent) {
-                        alert('請先在程式碼中或下方設定 Google 試算表連結！');
+                        alert('請先設定 Google 試算表連結！');
                         setShowSettings(true);
                     }
                     return;
@@ -129,16 +131,11 @@
                 setLoading(true);
                 try {
                     const response = await fetch(targetUrl);
-                    
-                    if (!response.ok) {
-                        throw new Error(`連線錯誤 (Status: ${response.status})`);
-                    }
-                    
+                    if (!response.ok) throw new Error(`Status: ${response.status}`);
                     const text = await response.text();
                     
-                    // ★★★ 診斷 2: 檢查回傳內容是否為 HTML (代表權限不足或未發布) ★★★
                     if (text.trim().startsWith('<!DOCTYPE html>') || text.includes('<html')) {
-                        throw new Error('讀取到 HTML 網頁而非 CSV。\n\n請確認您的試算表：\n1. 已點選「檔案 > 共用 > 發布到網路」\n2. 格式選擇「逗號分隔值 (.csv)」\n3. 權限沒有被公司或組織限制');
+                        throw new Error('讀取到 HTML，請確認試算表已「發布到網路」為 CSV 格式。');
                     }
 
                     const rows = text.split('\n').map(row => row.split(','));
@@ -170,14 +167,7 @@
 
                 } catch (error) {
                     console.error(error);
-                    if (!isSilent) {
-                        // ★★★ 診斷 3: 針對 Failed to fetch 給出具體建議 ★★★
-                        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                            alert('⚠️ 連線失敗 (Failed to fetch) ⚠️\n\n瀏覽器拒絕了連線請求。這通常是因為：\n1. 您正在使用電腦直接開啟檔案 (請上傳到 GitHub)\n2. 試算表網址有誤\n3. 網路不穩');
-                        } else {
-                            alert(`更新失敗：${error.message}`);
-                        }
-                    }
+                    if (!isSilent) alert(`更新失敗：${error.message}`);
                 } finally {
                     setLoading(false);
                 }
@@ -189,8 +179,24 @@
             };
 
             const totalAssetsValue = useMemo(() => assets.reduce((acc, asset) => acc + calculateValueTWD(asset), 0), [assets, exchangeRate]);
-            const pieData = useMemo(() => assets.map(a => ({ name: a.id, value: calculateValueTWD(a) })).sort((a, b) => b.value - a.value), [assets, exchangeRate]);
-            const barData = useMemo(() => assets.map(a => ({ name: a.id, 台幣價值: Math.round(calculateValueTWD(a)), 原幣價格: a.price })), [assets, exchangeRate]);
+            
+            // 優化: 計算長條圖用的數據，加入百分比字串
+            const barData = useMemo(() => assets.map(a => {
+                const val = calculateValueTWD(a);
+                const percent = totalAssetsValue > 0 ? (val / totalAssetsValue) * 100 : 0;
+                return {
+                    name: a.id,
+                    台幣價值: Math.round(val),
+                    原幣價格: a.price,
+                    percentageStr: percent.toFixed(1) + '%' // 加入百分比字串
+                };
+            }), [assets, exchangeRate, totalAssetsValue]);
+
+            // 圓餅圖數據
+            const pieData = useMemo(() => assets.map(a => ({ 
+                name: a.id, 
+                value: calculateValueTWD(a) 
+            })).sort((a, b) => b.value - a.value), [assets, exchangeRate]);
 
             const handleShareChange = (id, v) => setAssets(prev => prev.map(a => a.id === id ? { ...a, shares: Number(v) } : a));
             const handlePriceChange = (id, v) => setAssets(prev => prev.map(a => a.id === id ? { ...a, price: Number(v) } : a));
@@ -231,20 +237,17 @@
                                     <IconRefresh spinning={loading} />
                                     {loading ? '更新中...' : '立即同步股價'}
                                 </button>
-                                {/* 如果沒有寫死網址，顯示設定按鈕 */}
                                 {!MY_SHEET_URL && (
-                                    <button onClick={() => setShowSettings(!showSettings)} className="p-2 bg-slate-100 rounded-lg hover:bg-slate-200 text-slate-600" title="設定連結">
+                                    <button onClick={() => setShowSettings(!showSettings)} className="p-2 bg-slate-100 rounded-lg hover:bg-slate-200 text-slate-600">
                                         <IconSettings />
                                     </button>
                                 )}
                             </div>
                         </div>
 
-                        {/* 如果沒有填網址，顯示提示與輸入框 */}
                         {!MY_SHEET_URL && (showSettings || !sheetUrl) && (
                             <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl text-sm">
-                                <h3 className="font-bold flex items-center gap-2 mb-2"><IconLink /> 首次使用請設定 Google 試算表</h3>
-                                <p className="mb-2">您還沒在程式碼中貼上連結。沒關係，您也可以貼在這裡 (會自動儲存)：</p>
+                                <h3 className="font-bold flex items-center gap-2 mb-2"><IconLink /> 設定 Google 試算表</h3>
                                 <div className="flex gap-2">
                                     <input 
                                         type="text" 
@@ -268,7 +271,7 @@
                             </div>
                             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 md:col-span-2 h-64">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={barData} layout="vertical" margin={{left: 40, right: 20}}>
+                                    <BarChart data={barData} layout="vertical" margin={{left: 40, right: 60}}>
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.3} />
                                         <XAxis type="number" hide />
                                         <YAxis dataKey="name" type="category" width={60} tick={{fontSize: 12, fontWeight: 500}} />
@@ -277,7 +280,10 @@
                                             contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}}
                                             formatter={(value) => `$${value.toLocaleString()}`} 
                                         />
-                                        <Bar dataKey="台幣價值" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24} />
+                                        {/* 長條圖顯示百分比文字 (使用 LabelList) */}
+                                        <Bar dataKey="台幣價值" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24}>
+                                            <LabelList dataKey="percentageStr" position="right" style={{ fill: '#64748b', fontSize: '12px', fontWeight: 'bold' }} />
+                                        </Bar>
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
@@ -356,6 +362,10 @@
                                                 paddingAngle={4} 
                                                 dataKey="value"
                                                 stroke="none"
+                                                // 圓餅圖顯示百分比標籤
+                                                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                                                    return `${(percent * 100).toFixed(1)}%`;
+                                                }}
                                             >
                                                 {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                                             </Pie>
