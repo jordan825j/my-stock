@@ -14,8 +14,18 @@
 
     <style> 
         body { background-color: #f8fafc; } 
-        /* 讓圖表文字更清晰 */
         .recharts-text { font-family: sans-serif; font-weight: 500; }
+        /* 鎖定畫面的背景動畫 */
+        .lock-bg {
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
     </style>
 </head>
 <body>
@@ -23,17 +33,20 @@
 
     <script type="text/babel">
         // ============================================================================
-        // ★★★ 請在下方雙引號中，貼上您的 Google 試算表 CSV 網址 ★★★
+        // ★★★ 設定區 ★★★
         // ============================================================================
         
-        const MY_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRghdwdi-KiihvjPC5dGU_O8FRfzhZLp77JvD_dr1pRHtP_o39CEtFgk71oQwAGzLw5-ZNzB945UCLg/pub?output=csv"; 
+        // 1. 請在此設定您的密碼
+        const MY_PASSWORD = "08255299";
 
-        // ↑↑↑ 請貼在上面這兩個引號中間
+        // 2. 請在此貼上您的 Google 試算表 CSV 網址
+        const MY_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRghdwdi-KiihvjPC5dGU_O8FRfzhZLp77JvD_dr1pRHtP_o39CEtFgk71oQwAGzLw5-ZNzB945UCLg/pub?output=csv"; 
+        // ↑↑↑ 範例: "https://docs.google.com/spreadsheets/d/您的ID/pub?output=csv"
+
         // ============================================================================
 
 
         const { useState, useEffect, useMemo } = React;
-        // 加入 LabelList 用於長條圖顯示文字
         const { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } = window.Recharts || {};
 
         // --- 圖示元件 ---
@@ -45,8 +58,9 @@
         const IconClock = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
         const IconTrash = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
         const IconLink = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
+        const IconLock = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 text-white"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
 
-        const STORAGE_KEY = 'my-asset-dashboard-v4'; // 升級版本號
+        const STORAGE_KEY = 'my-asset-dashboard-v5'; // 升級版本號
         
         const INITIAL_ASSETS = [
             { id: '00692', name: '富邦公司治理', type: 'TW', currency: 'TWD', shares: 5000, price: 63.05 },
@@ -59,6 +73,11 @@
         const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#ff6b6b'];
 
         const AssetDashboard = () => {
+            // ★ 登入狀態控制 ★
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [inputPassword, setInputPassword] = useState("");
+            const [loginError, setLoginError] = useState(false);
+
             const [assets, setAssets] = useState(INITIAL_ASSETS);
             const [exchangeRate, setExchangeRate] = useState(31.65);
             const [loading, setLoading] = useState(false);
@@ -76,6 +95,7 @@
             });
             const [showSettings, setShowSettings] = useState(false);
 
+            // 初始化時讀取 LocalStorage
             useEffect(() => {
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (saved) {
@@ -107,12 +127,23 @@
                 }));
             }, [assets, exchangeRate, lastUpdated, sheetUrl]);
 
+            // ★ 處理登入 ★
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (inputPassword === MY_PASSWORD) {
+                    setIsLoggedIn(true);
+                    setLoginError(false);
+                } else {
+                    setLoginError(true);
+                    // 震動效果可透過 CSS class 處理
+                }
+            };
+
             const fetchFromSheet = async (urlOverride = null, isSilent = false) => {
                 let targetUrl = urlOverride || MY_SHEET_URL || sheetUrl;
 
-                // 本機檔案開啟警告
                 if (window.location.protocol === 'file:' && !isSilent) {
-                    alert('⚠️ 警告：請將檔案上傳至 GitHub Pages 以啟用連線功能。直接開啟檔案無法讀取 Google 試算表。');
+                    alert('⚠️ 請將檔案上傳至 GitHub Pages 以啟用連線功能。');
                     return;
                 }
 
@@ -122,8 +153,7 @@
 
                 if (!targetUrl || !targetUrl.includes('google.com')) {
                     if (!isSilent) {
-                        alert('請先設定 Google 試算表連結！');
-                        setShowSettings(true);
+                        // alert('請設定連結'); // 登入模式下減少干擾
                     }
                     return;
                 }
@@ -135,7 +165,7 @@
                     const text = await response.text();
                     
                     if (text.trim().startsWith('<!DOCTYPE html>') || text.includes('<html')) {
-                        throw new Error('讀取到 HTML，請確認試算表已「發布到網路」為 CSV 格式。');
+                        throw new Error('讀取到 HTML，請確認 CSV 設定。');
                     }
 
                     const rows = text.split('\n').map(row => row.split(','));
@@ -163,11 +193,11 @@
                     });
 
                     setLastUpdated(new Date().toLocaleString());
-                    if (!isSilent) alert(`更新成功！`);
+                    if (!isSilent) {} // console.log(`更新成功`);
 
                 } catch (error) {
                     console.error(error);
-                    if (!isSilent) alert(`更新失敗：${error.message}`);
+                    if (!isSilent) console.error(`更新失敗：${error.message}`);
                 } finally {
                     setLoading(false);
                 }
@@ -180,7 +210,6 @@
 
             const totalAssetsValue = useMemo(() => assets.reduce((acc, asset) => acc + calculateValueTWD(asset), 0), [assets, exchangeRate]);
             
-            // 優化: 計算長條圖用的數據，加入百分比字串
             const barData = useMemo(() => assets.map(a => {
                 const val = calculateValueTWD(a);
                 const percent = totalAssetsValue > 0 ? (val / totalAssetsValue) * 100 : 0;
@@ -188,11 +217,10 @@
                     name: a.id,
                     台幣價值: Math.round(val),
                     原幣價格: a.price,
-                    percentageStr: percent.toFixed(1) + '%' // 加入百分比字串
+                    percentageStr: percent.toFixed(1) + '%' 
                 };
             }), [assets, exchangeRate, totalAssetsValue]);
 
-            // 圓餅圖數據
             const pieData = useMemo(() => assets.map(a => ({ 
                 name: a.id, 
                 value: calculateValueTWD(a) 
@@ -207,6 +235,39 @@
                     window.location.reload();
                 }
             };
+
+            // ★ 鎖定畫面 UI ★
+            if (!isLoggedIn) {
+                return (
+                    <div className="min-h-screen lock-bg flex items-center justify-center p-4">
+                        <div className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
+                            <div className="bg-white/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <IconLock />
+                            </div>
+                            <h2 className="text-2xl font-bold text-white mb-2">資產儀表板</h2>
+                            <p className="text-white/70 mb-6 text-sm">請輸入密碼以檢視內容</p>
+                            
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <input 
+                                    type="password" 
+                                    value={inputPassword}
+                                    onChange={(e) => setInputPassword(e.target.value)}
+                                    placeholder="輸入密碼" 
+                                    className="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 text-center tracking-widest text-lg"
+                                    autoFocus
+                                />
+                                {loginError && <div className="text-red-200 text-sm font-bold animate-pulse">密碼錯誤，請重試</div>}
+                                <button 
+                                    type="submit"
+                                    className="w-full bg-white text-blue-600 font-bold py-3 rounded-xl hover:bg-blue-50 transition-colors shadow-lg"
+                                >
+                                    解鎖
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
 
             if (!window.Recharts) return <div className="p-10 text-center">載入圖表庫中...</div>;
 
@@ -280,7 +341,6 @@
                                             contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}}
                                             formatter={(value) => `$${value.toLocaleString()}`} 
                                         />
-                                        {/* 長條圖顯示百分比文字 (使用 LabelList) */}
                                         <Bar dataKey="台幣價值" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24}>
                                             <LabelList dataKey="percentageStr" position="right" style={{ fill: '#64748b', fontSize: '12px', fontWeight: 'bold' }} />
                                         </Bar>
@@ -362,7 +422,6 @@
                                                 paddingAngle={4} 
                                                 dataKey="value"
                                                 stroke="none"
-                                                // 圓餅圖顯示百分比標籤
                                                 label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
                                                     return `${(percent * 100).toFixed(1)}%`;
                                                 }}
