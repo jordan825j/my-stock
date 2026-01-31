@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的即時資產儀表板</title>
+    <title>王重鈞的資產分配</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -36,12 +36,11 @@
         // ★★★ 設定區 ★★★
         // ============================================================================
         
-        // 1. 請在此設定您的密碼
+        // 1. 您的密碼
         const MY_PASSWORD = "08255299";
 
-        // 2. 請在此貼上您的 Google 試算表 CSV 網址
+        // 2. 您的 Google 試算表 CSV 網址
         const MY_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRghdwdi-KiihvjPC5dGU_O8FRfzhZLp77JvD_dr1pRHtP_o39CEtFgk71oQwAGzLw5-ZNzB945UCLg/pub?output=csv"; 
-        // ↑↑↑ 範例: "https://docs.google.com/spreadsheets/d/您的ID/pub?output=csv"
 
         // ============================================================================
 
@@ -52,15 +51,15 @@
         // --- 圖示元件 ---
         const IconWallet = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-blue-600"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>;
         const IconRefresh = ({ spinning }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 ${spinning ? 'animate-spin' : ''}`}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>;
-        const IconTrending = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>;
         const IconPie = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>;
         const IconSettings = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
         const IconClock = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
         const IconTrash = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
         const IconLink = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
         const IconLock = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 text-white"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
+        const IconCash = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-green-600"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>;
 
-        const STORAGE_KEY = 'my-asset-dashboard-v5'; // 升級版本號
+        const STORAGE_KEY = 'my-asset-dashboard-v6'; // 維持版本號，確保儲存機制一致
         
         const INITIAL_ASSETS = [
             { id: '00692', name: '富邦公司治理', type: 'TW', currency: 'TWD', shares: 5000, price: 63.05 },
@@ -70,7 +69,7 @@
             { id: 'QQQM', name: '納斯達克 100 ETF', type: 'US', currency: 'USD', shares: 30, price: 255.71 }
         ];
 
-        const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#ff6b6b'];
+        const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#ff6b6b', '#22c55e'];
 
         const AssetDashboard = () => {
             // ★ 登入狀態控制 ★
@@ -79,6 +78,7 @@
             const [loginError, setLoginError] = useState(false);
 
             const [assets, setAssets] = useState(INITIAL_ASSETS);
+            const [cashValue, setCashValue] = useState(0); 
             const [exchangeRate, setExchangeRate] = useState(31.65);
             const [loading, setLoading] = useState(false);
             const [lastUpdated, setLastUpdated] = useState("尚未同步");
@@ -105,6 +105,7 @@
                         if (parsed.exchangeRate) setExchangeRate(parsed.exchangeRate);
                         if (parsed.lastUpdated) setLastUpdated(parsed.lastUpdated);
                         if (parsed.sheetUrl) setSheetUrl(parsed.sheetUrl);
+                        if (parsed.cashValue !== undefined) setCashValue(parsed.cashValue);
                     } catch (e) { console.error(e); }
                 }
             }, []);
@@ -123,9 +124,9 @@
 
             useEffect(() => {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                    assets, exchangeRate, lastUpdated, sheetUrl
+                    assets, exchangeRate, lastUpdated, sheetUrl, cashValue
                 }));
-            }, [assets, exchangeRate, lastUpdated, sheetUrl]);
+            }, [assets, exchangeRate, lastUpdated, sheetUrl, cashValue]);
 
             // ★ 處理登入 ★
             const handleLogin = (e) => {
@@ -135,7 +136,6 @@
                     setLoginError(false);
                 } else {
                     setLoginError(true);
-                    // 震動效果可透過 CSS class 處理
                 }
             };
 
@@ -152,9 +152,7 @@
                 }
 
                 if (!targetUrl || !targetUrl.includes('google.com')) {
-                    if (!isSilent) {
-                        // alert('請設定連結'); // 登入模式下減少干擾
-                    }
+                    if (!isSilent) {} 
                     return;
                 }
 
@@ -193,7 +191,7 @@
                     });
 
                     setLastUpdated(new Date().toLocaleString());
-                    if (!isSilent) {} // console.log(`更新成功`);
+                    if (!isSilent) {} 
 
                 } catch (error) {
                     console.error(error);
@@ -208,23 +206,44 @@
                 return asset.currency === 'USD' ? rawValue * exchangeRate : rawValue;
             };
 
-            const totalAssetsValue = useMemo(() => assets.reduce((acc, asset) => acc + calculateValueTWD(asset), 0), [assets, exchangeRate]);
+            const totalStockValue = useMemo(() => assets.reduce((acc, asset) => acc + calculateValueTWD(asset), 0), [assets, exchangeRate]);
+            const totalAssetsValue = totalStockValue + cashValue;
             
-            const barData = useMemo(() => assets.map(a => {
-                const val = calculateValueTWD(a);
-                const percent = totalAssetsValue > 0 ? (val / totalAssetsValue) * 100 : 0;
-                return {
-                    name: a.id,
-                    台幣價值: Math.round(val),
-                    原幣價格: a.price,
-                    percentageStr: percent.toFixed(1) + '%' 
-                };
-            }), [assets, exchangeRate, totalAssetsValue]);
+            const barData = useMemo(() => {
+                const stockItems = assets.map(a => {
+                    const val = calculateValueTWD(a);
+                    const percent = totalAssetsValue > 0 ? (val / totalAssetsValue) * 100 : 0;
+                    return {
+                        name: a.id,
+                        台幣價值: Math.round(val),
+                        原幣價格: a.price,
+                        percentageStr: percent.toFixed(1) + '%' 
+                    };
+                });
+                
+                if (cashValue > 0) {
+                    const percent = totalAssetsValue > 0 ? (cashValue / totalAssetsValue) * 100 : 0;
+                    stockItems.push({
+                        name: '現金',
+                        台幣價值: Math.round(cashValue),
+                        原幣價格: cashValue,
+                        percentageStr: percent.toFixed(1) + '%'
+                    });
+                }
+                
+                return stockItems;
+            }, [assets, exchangeRate, totalAssetsValue, cashValue]);
 
-            const pieData = useMemo(() => assets.map(a => ({ 
-                name: a.id, 
-                value: calculateValueTWD(a) 
-            })).sort((a, b) => b.value - a.value), [assets, exchangeRate]);
+            const pieData = useMemo(() => {
+                const items = assets.map(a => ({ 
+                    name: a.id, 
+                    value: calculateValueTWD(a) 
+                }));
+                if (cashValue > 0) {
+                    items.push({ name: '現金', value: cashValue });
+                }
+                return items.sort((a, b) => b.value - a.value);
+            }, [assets, exchangeRate, cashValue]);
 
             const handleShareChange = (id, v) => setAssets(prev => prev.map(a => a.id === id ? { ...a, shares: Number(v) } : a));
             const handlePriceChange = (id, v) => setAssets(prev => prev.map(a => a.id === id ? { ...a, price: Number(v) } : a));
@@ -244,7 +263,7 @@
                             <div className="bg-white/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <IconLock />
                             </div>
-                            <h2 className="text-2xl font-bold text-white mb-2">資產儀表板</h2>
+                            <h2 className="text-2xl font-bold text-white mb-2">王重鈞的資產分配</h2>
                             <p className="text-white/70 mb-6 text-sm">請輸入密碼以檢視內容</p>
                             
                             <form onSubmit={handleLogin} className="space-y-4">
@@ -279,7 +298,7 @@
                         <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
                             <div>
                                 <h1 className="text-2xl font-bold flex items-center gap-2 text-slate-800">
-                                    <IconWallet /> 我的資產儀表板
+                                    <IconWallet /> 王重鈞的資產分配
                                 </h1>
                                 <div className="flex items-center gap-2 mt-1 text-sm text-slate-500">
                                     <IconClock /> 最後更新: {lastUpdated}
@@ -343,6 +362,9 @@
                                         />
                                         <Bar dataKey="台幣價值" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24}>
                                             <LabelList dataKey="percentageStr" position="right" style={{ fill: '#64748b', fontSize: '12px', fontWeight: 'bold' }} />
+                                            {barData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.name === '現金' ? '#22c55e' : '#3b82f6'} />
+                                            ))}
                                         </Bar>
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -361,6 +383,22 @@
                                         <IconTrash /> 重置
                                     </button>
                                 </div>
+                                
+                                {/* ★ 新增現金輸入區 - 顏色加深為 green-100 ★ */}
+                                <div className="p-4 bg-green-100 border-b border-slate-100 flex items-center gap-4">
+                                    <div className="flex items-center gap-2 text-green-800 font-bold text-lg">
+                                        <IconCash />
+                                        手邊現金 (TWD):
+                                    </div>
+                                    <input 
+                                        type="number" 
+                                        value={cashValue} 
+                                        onChange={(e) => setCashValue(Number(e.target.value))} 
+                                        className="w-40 text-right p-2 border border-green-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 outline-none transition-all shadow-sm font-bold text-xl text-green-800"
+                                        placeholder="輸入金額"
+                                    />
+                                </div>
+
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left">
                                         <thead className="text-slate-500 text-xs uppercase bg-slate-50 border-b border-slate-100">
