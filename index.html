@@ -150,3 +150,116 @@
                             <form onSubmit={(e) => { e.preventDefault(); if (inputPassword === MY_PASSWORD) setIsLoggedIn(true); }} className="space-y-4">
                                 <input type="password" value={inputPassword} onChange={(e) => setInputPassword(e.target.value)} placeholder="輸入密碼" className="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white text-center text-lg outline-none focus:ring-2 focus:ring-white/50" autoFocus />
                                 <button type="submit" className="w-full bg-white text-blue-600 font-bold py-3 rounded-xl hover:bg-blue-50 transition-colors">解鎖</button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (!isLibReady) {
+                return (
+                    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 text-center">
+                        <IconRefresh spinning={true} className="w-12 h-12 text-blue-500 mb-4 mx-auto" />
+                        <div className="text-blue-600 font-bold text-lg">小奈正在為老闆準備圖表，請稍候...</div>
+                        <div className="text-slate-400 text-sm mt-2">如果卡住超過 10 秒，請嘗試清除瀏覽器快取。</div>
+                    </div>
+                );
+            }
+
+            const { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LabelList } = window.Recharts;
+
+            return (
+                <div className="min-h-screen font-sans p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+                    <header className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div>
+                            <h1 className="text-2xl font-bold flex items-center gap-2 text-slate-800"><IconWallet /> 王重鈞的資產配置</h1>
+                            <p className="text-sm text-slate-500 mt-1">最後更新: {lastUpdated}</p>
+                        </div>
+                        <div className="flex items-center gap-3 mt-4 md:mt-0">
+                            <div className="bg-slate-100 px-3 py-2 rounded-lg text-sm font-medium text-slate-700">匯率 (USD/TWD): {exchangeRate.toFixed(4)}</div>
+                            <button onClick={fetchFromSheet} className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-all active:scale-95">
+                                <IconRefresh spinning={loading} /> {loading ? '同步中...' : '同步股價'}
+                            </button>
+                        </div>
+                    </header>
+
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-emerald-500 flex items-center justify-between overflow-hidden">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-emerald-50 p-3 rounded-full"><IconCash /></div>
+                            <div>
+                                <p className="text-sm font-bold text-emerald-600 uppercase tracking-wider">現金資產 (CASH)</p>
+                                <h2 className="text-3xl font-black text-slate-800">${Math.round(calcValueTWD(cashAsset)).toLocaleString()} <span className="text-sm text-slate-400 font-normal">TWD</span></h2>
+                            </div>
+                        </div>
+                        <div className="hidden md:block text-right">
+                            <p className="text-xs text-slate-400">佔總資產比重</p>
+                            <p className="text-xl font-bold text-slate-600">{((calcValueTWD(cashAsset) / totalValue) * 100).toFixed(1)}%</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 rounded-2xl shadow-lg flex flex-col justify-center">
+                            <span className="text-blue-100 text-sm font-medium mb-1">總資產估值 (TWD)</span>
+                            <div className="text-4xl font-black">${Math.round(totalValue).toLocaleString()}</div>
+                        </div>
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 md:col-span-2 h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={assets.map(a => ({ name: a.id, value: Math.round(calcValueTWD(a)), pct: ((calcValueTWD(a)/totalValue)*100).toFixed(1)+'%' }))} layout="vertical" margin={{right: 40}}>
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="name" type="category" width={60} tick={{fontSize: 12}} />
+                                    <Tooltip formatter={(val) => `$${val.toLocaleString()}`} cursor={{fill: '#f1f5f9'}} />
+                                    <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20}>
+                                        <LabelList dataKey="pct" position="right" style={{fontSize: '11px', fill: '#64748b'}} />
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden text-sm">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50 text-slate-500 uppercase font-bold border-b border-slate-100">
+                                    <tr>
+                                        <th className="p-4">代號</th>
+                                        <th className="p-4 text-right">股數 / 金額</th>
+                                        <th className="p-4 text-right">現價</th>
+                                        <th className="p-4 text-right">總值 (TWD)</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {assets.map(a => (
+                                        <tr key={a.id} className={a.id === 'CASH' ? "bg-emerald-50/30" : "hover:bg-slate-50 transition-colors"}>
+                                            <td className="p-4 font-bold text-slate-700">{a.id} <span className="block text-[10px] font-normal text-slate-400">{a.name}</span></td>
+                                            <td className="p-4 text-right">
+                                                <input type="number" value={a.shares} onChange={(e) => setAssets(prev => prev.map(item => item.id === a.id ? { ...item, shares: Number(e.target.value) } : item))} className="w-24 text-right border border-slate-200 rounded p-1 focus:ring-1 focus:ring-blue-500 outline-none" />
+                                            </td>
+                                            <td className="p-4 text-right text-slate-500">{a.id === 'CASH' ? '-' : a.price.toFixed(2)}</td>
+                                            <td className="p-4 text-right font-bold text-slate-700">${Math.round(calcValueTWD(a)).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[400px]">
+                            <h3 className="font-bold text-slate-700 mb-4">資產佔比</h3>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={assets.map(a => ({ name: a.id, value: calcValueTWD(a) }))} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value" stroke="none" label={({ percent }) => `${(percent * 100).toFixed(1)}%`}>
+                                        {assets.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                                    </Pie>
+                                    <Tooltip formatter={(v) => `$${v.toLocaleString()}`} />
+                                    <Legend iconType="circle" verticalAlign="bottom" height={36} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<AssetDashboard />);
+    </script>
+</body>
+</html>
