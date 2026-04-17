@@ -39,26 +39,22 @@
         // ============================================================================
 
         const { useState, useEffect, useMemo } = React;
-        const { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } = window.Recharts || {};
 
         const IconWallet = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-blue-600"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>;
         const IconRefresh = ({ spinning }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 ${spinning ? 'animate-spin' : ''}`}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>;
         const IconLock = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 text-white"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
         const IconCash = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-emerald-600"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>;
 
-        const STORAGE_KEY = 'wang-assets-dashboard-v8'; // 升級版本號以刷新快取
+        const STORAGE_KEY = 'wang-assets-dashboard-v12'; // 升級版本號強制洗掉舊暫存
         
         const INITIAL_ASSETS = [
-            { id: '692', name: '富邦公司治理', type: 'TW', currency: 'TWD', shares: 48000, price: 73.8 }, // 配合表單改成 692
+            { id: '692', name: '富邦公司治理', type: 'TW', currency: 'TWD', shares: 48000, price: 73.80 },
             { id: 'AAPL', name: '蘋果公司', type: 'US', currency: 'USD', shares: 6, price: 263.40 },
-            { id: 'IBIT', name: '比特幣 ETF', type: 'US', currency: 'USD', shares: 670.97211
-, price: 42.73 },
-            { id: 'TSLA', name: '特斯拉', type: 'US', currency: 'USD', shares: 307
-, price: 388.9 },
-            { id: 'SMH', name: '半導體 ETF', type: 'US', currency: 'USD', shares: 278.71878
-, price: 454.8 },
+            { id: 'IBIT', name: '比特幣 ETF', type: 'US', currency: 'USD', shares: 670.97211, price: 42.73 },
+            { id: 'TSLA', name: '特斯拉', type: 'US', currency: 'USD', shares: 307, price: 388.90 },
+            { id: 'SMH', name: '半導體 ETF', type: 'US', currency: 'USD', shares: 278.71878, price: 454.80 },
             { id: 'QQQM', name: '納斯達克 100 ETF', type: 'US', currency: 'USD', shares: 734.71673, price: 263.69 },
-            { id: 'CASH', name: '現金資產', type: 'TW', currency: 'TWD', shares: 14559, price: 1 } 
+            { id: 'CASH', name: '現金資產', type: 'TW', currency: 'TWD', shares: 14534, price: 1 } 
         ];
 
         const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#ff6b6b', '#20B2AA', '#F43F5E'];
@@ -70,6 +66,17 @@
             const [exchangeRate, setExchangeRate] = useState(31.5685);
             const [loading, setLoading] = useState(false);
             const [lastUpdated, setLastUpdated] = useState("尚未同步");
+            
+            const [isLibReady, setIsLibReady] = useState(false);
+            useEffect(() => {
+                const checkLib = setInterval(() => {
+                    if (window.Recharts) {
+                        setIsLibReady(true);
+                        clearInterval(checkLib);
+                    }
+                }, 100);
+                return () => clearInterval(checkLib);
+            }, []);
 
             useEffect(() => {
                 const saved = localStorage.getItem(STORAGE_KEY);
@@ -93,7 +100,6 @@
             const fetchFromSheet = async () => {
                 setLoading(true);
                 try {
-                    // 確保讀取 CSV 格式
                     const targetUrl = MY_SHEET_URL.includes('/edit') ? MY_SHEET_URL.replace(/\/edit.*$/, '/pub?output=csv') : MY_SHEET_URL;
                     const response = await fetch(targetUrl);
                     const text = await response.text();
@@ -101,19 +107,22 @@
                     const priceMap = {};
                     
                     rows.forEach(row => {
-                        // ★ 關鍵修復：因為老闆表單A欄是序號，B欄是代號，C欄是價格。所以要抓 row[1] 和 row[2] ★
+                        // ★ 修正區域 1: 強化 CSV 解析，確實讀取 USD 與 692，並刪除自作聰明的轉換 ★
                         if (row.length >= 3) {
-                            const id = row[1].replace(/["\r]/g, '').trim().toUpperCase();
-                            const price = parseFloat(row[2].replace(/["\r]/g, ''));
+                            let id = row[1] ? row[1].replace(/["\r\n\s]/g, '').toUpperCase() : '';
+                            const price = row[2] ? parseFloat(row[2].replace(/["\r\n\s,]/g, '')) : NaN;
                             if (id && !isNaN(price)) priceMap[id] = price;
                         }
                     });
 
-                    if (priceMap['USD']) setExchangeRate(priceMap['USD']);
+                    // ★ 修正區域 2: 確保匯率能正確套用 ★
+                    if (priceMap['USD']) {
+                        setExchangeRate(priceMap['USD']);
+                    }
                     
                     setAssets(curr => curr.map(a => {
-                        if(a.id === 'CASH') return a; // 現金維持不變
-                        const newPrice = priceMap[a.id.toUpperCase()];
+                        if(a.id === 'CASH') return a; 
+                        const newPrice = priceMap[a.id];
                         return newPrice ? { ...a, price: newPrice } : a;
                     }));
                     setLastUpdated(new Date().toLocaleString());
@@ -141,107 +150,3 @@
                             <form onSubmit={(e) => { e.preventDefault(); if (inputPassword === MY_PASSWORD) setIsLoggedIn(true); }} className="space-y-4">
                                 <input type="password" value={inputPassword} onChange={(e) => setInputPassword(e.target.value)} placeholder="輸入密碼" className="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white text-center text-lg outline-none focus:ring-2 focus:ring-white/50" autoFocus />
                                 <button type="submit" className="w-full bg-white text-blue-600 font-bold py-3 rounded-xl hover:bg-blue-50 transition-colors">解鎖</button>
-                            </form>
-                        </div>
-                    </div>
-                );
-            }
-
-            if (!window.Recharts) return <div className="p-10 text-center">載入圖表庫中...</div>;
-
-            return (
-                <div className="min-h-screen font-sans p-4 md:p-8 max-w-7xl mx-auto space-y-6">
-                    <header className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <div>
-                            <h1 className="text-2xl font-bold flex items-center gap-2 text-slate-800"><IconWallet /> 王重鈞的資產配置</h1>
-                            <p className="text-sm text-slate-500 mt-1">最後更新: {lastUpdated}</p>
-                        </div>
-                        <div className="flex items-center gap-3 mt-4 md:mt-0">
-                            <div className="bg-slate-100 px-3 py-2 rounded-lg text-sm font-medium text-slate-700">匯率 (USD/TWD): {exchangeRate.toFixed(4)}</div>
-                            <button onClick={fetchFromSheet} className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-all active:scale-95">
-                                <IconRefresh spinning={loading} /> {loading ? '同步中...' : '同步股價'}
-                            </button>
-                        </div>
-                    </header>
-
-                    {/* ★ 現金資產看板 ★ */}
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-emerald-500 flex items-center justify-between overflow-hidden">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-emerald-50 p-3 rounded-full"><IconCash /></div>
-                            <div>
-                                <p className="text-sm font-bold text-emerald-600 uppercase tracking-wider">現金資產 (CASH)</p>
-                                <h2 className="text-3xl font-black text-slate-800">${Math.round(calcValueTWD(cashAsset)).toLocaleString()} <span className="text-sm text-slate-400 font-normal">TWD</span></h2>
-                            </div>
-                        </div>
-                        <div className="hidden md:block text-right">
-                            <p className="text-xs text-slate-400">佔總資產比重</p>
-                            <p className="text-xl font-bold text-slate-600">{((calcValueTWD(cashAsset) / totalValue) * 100).toFixed(1)}%</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 rounded-2xl shadow-lg flex flex-col justify-center">
-                            <span className="text-blue-100 text-sm font-medium mb-1">總資產估值 (TWD)</span>
-                            <div className="text-4xl font-black">${Math.round(totalValue).toLocaleString()}</div>
-                        </div>
-                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 md:col-span-2 h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={assets.map(a => ({ name: a.id, value: Math.round(calcValueTWD(a)), pct: ((calcValueTWD(a)/totalValue)*100).toFixed(1)+'%' }))} layout="vertical" margin={{right: 40}}>
-                                    <XAxis type="number" hide />
-                                    <YAxis dataKey="name" type="category" width={60} tick={{fontSize: 12}} />
-                                    <Tooltip formatter={(val) => `$${val.toLocaleString()}`} cursor={{fill: '#f1f5f9'}} />
-                                    <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20}>
-                                        <LabelList dataKey="pct" position="right" style={{fontSize: '11px', fill: '#64748b'}} />
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden text-sm">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50 text-slate-500 uppercase font-bold border-b border-slate-100">
-                                    <tr>
-                                        <th className="p-4">代號</th>
-                                        <th className="p-4 text-right">股數 / 金額</th>
-                                        <th className="p-4 text-right">現價</th>
-                                        <th className="p-4 text-right">總值 (TWD)</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                    {assets.map(a => (
-                                        <tr key={a.id} className={a.id === 'CASH' ? "bg-emerald-50/30" : "hover:bg-slate-50 transition-colors"}>
-                                            <td className="p-4 font-bold text-slate-700">{a.id} <span className="block text-[10px] font-normal text-slate-400">{a.name}</span></td>
-                                            <td className="p-4 text-right">
-                                                <input type="number" value={a.shares} onChange={(e) => setAssets(prev => prev.map(item => item.id === a.id ? { ...item, shares: Number(e.target.value) } : item))} className="w-24 text-right border border-slate-200 rounded p-1 focus:ring-1 focus:ring-blue-500 outline-none" />
-                                            </td>
-                                            <td className="p-4 text-right text-slate-500">{a.id === 'CASH' ? '-' : a.price.toFixed(2)}</td>
-                                            <td className="p-4 text-right font-bold text-slate-700">${Math.round(calcValueTWD(a)).toLocaleString()}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[400px]">
-                            <h3 className="font-bold text-slate-700 mb-4">資產佔比</h3>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={assets.map(a => ({ name: a.id, value: calcValueTWD(a) }))} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value" stroke="none" label={({ percent }) => `${(percent * 100).toFixed(1)}%`}>
-                                        {assets.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                                    </Pie>
-                                    <Tooltip formatter={(v) => `$${v.toLocaleString()}`} />
-                                    <Legend iconType="circle" verticalAlign="bottom" height={36} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        ReactDOM.createRoot(document.getElementById('root')).render(<AssetDashboard />);
-    </script>
-</body>
-</html>
